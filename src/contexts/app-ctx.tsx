@@ -84,6 +84,8 @@ function AppProvider({ children }: Readonly<{ children: React.ReactNode }>) {
 
   const uploadFromUrl = useCallback(async (url: string) => {
     try {
+      setPending(true);
+
       const res = await fetch(url).catch(() => {
         throw new TypeError('Failed to fetch image URL');
       });
@@ -107,8 +109,6 @@ function AppProvider({ children }: Readonly<{ children: React.ReactNode }>) {
         toast.error('Only JPEG, PNG, and SVG files are allowed');
         return;
       }
-
-      setPending(true);
 
       const blob = await res.blob();
       const debut = Date.now();

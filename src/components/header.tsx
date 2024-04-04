@@ -1,3 +1,10 @@
+import { z } from 'zod';
+import { toast } from 'sonner';
+import { useEffect, useState } from 'react';
+import { LoaderCircle, Upload } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+
 import {
   Dialog,
   DialogClose,
@@ -7,33 +14,53 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { useEffect, useState } from 'react';
-import { LoaderCircle, Upload } from 'lucide-react';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from '@/components/ui/form';
 import { useApp } from '@/contexts/app-ctx';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
+const urlSchema = z.object({
+  url: z
+    .string()
+    .min(1, { message: 'URL is required' })
+    .regex(
+      /^(http|https):\/\/([^<>/:\\?*]{1,256})\.?([^\s]{2,64})(:[0-9]*)?(\/[^<>\s]*)?(\?[^<>\s]*)?$/,
+      { message: 'Invalid URL provided' },
+    ),
+});
+
 export const Header = () => {
-  const [url, setUrl] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const { pending, pasteHandler, uploadFromUrl } = useApp();
 
-  const submitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const form = useForm<z.infer<typeof urlSchema>>({
+    resolver: zodResolver(urlSchema),
+    defaultValues: {
+      url: '',
+    },
+  });
 
-    if (!url) return;
-
+  async function submitHandler({ url }: z.infer<typeof urlSchema>) {
     try {
       await uploadFromUrl(url);
     } catch (e) {
       console.error(e);
       toast.error('An error occurred');
     } finally {
-      setUrl('');
+      form.reset();
       setShowDialog(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (!showDialog) form.reset();
+  }, [showDialog]);
 
   useEffect(() => {
     if (showDialog) window.removeEventListener('paste', pasteHandler);
@@ -57,26 +84,36 @@ export const Header = () => {
                 size={16}
                 className="mr-2"
               />
-              <span>Upload from URL</span>
+              <span>Upload from URL (BETA)</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Upload from URL</DialogTitle>
+              <DialogTitle>Upload from URL (BETA)</DialogTitle>
             </DialogHeader>
-
-            <form
-              autoComplete="off"
-              id="paste-url-form"
-              onSubmit={submitHandler}
-            >
-              <Input
-                type="url"
-                value={url}
-                placeholder="https://example.com/image.jpg"
-                onChange={(e) => setUrl(e.target.value)}
-              />
-            </form>
+            <Form {...form}>
+              <form
+                autoComplete="off"
+                id="paste-url-form"
+                onSubmit={form.handleSubmit(submitHandler)}
+              >
+                <FormField
+                  control={form.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/image.jpg"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
 
             <DialogFooter>
               <DialogClose asChild>
@@ -90,13 +127,13 @@ export const Header = () => {
               <Button
                 type="submit"
                 form="paste-url-form"
-                disabled={!url || pending}
+                disabled={pending}
               >
                 {pending ? (
                   <>
                     <LoaderCircle
                       size={16}
-                      className="animate-spin-fast mr-1.5"
+                      className="mr-1.5 animate-spin-fast"
                     />
                     <span>Processing</span>
                   </>
