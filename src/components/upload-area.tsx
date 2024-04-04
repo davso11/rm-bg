@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
 
 export const UploadArea = () => {
   const [pending, setPending] = useState(false);
+  const [pendingMsg, setPendingMsg] = useState<string>(
+    'May take a few seconds',
+  );
 
   const onDrop = useCallback((files: File[], rejected: FileRejection[]) => {
     if (rejected.length > 0) {
@@ -36,6 +39,14 @@ export const UploadArea = () => {
 
     setPending(true);
 
+    const timeout1 = setTimeout(() => {
+      setPendingMsg('Just a few more seconds...');
+    }, 1000 * 30); // 30s
+
+    const timeout2 = setTimeout(() => {
+      setPendingMsg('Your image may be quite large, please be patient');
+    }, 1000 * 90); // 1m30s
+
     const reader = new FileReader();
 
     reader.readAsArrayBuffer(file);
@@ -61,6 +72,9 @@ export const UploadArea = () => {
         toast.error('An error occurred');
       } finally {
         setPending(false);
+        clearTimeout(timeout1);
+        clearTimeout(timeout2);
+        setPendingMsg('May take a few seconds');
       }
     };
 
@@ -107,7 +121,7 @@ export const UploadArea = () => {
             <p className="mt-2 text-center text-zinc-400">
               <span>Removing the background from the image...</span>
               <br />
-              <span>May take a few seconds</span>
+              <span>{pendingMsg}</span>
             </p>
           </div>
         ) : (
